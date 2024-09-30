@@ -4,8 +4,10 @@ import { getAllData } from "systeminformation";
 import { etag } from "hono/etag";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { timing, startTime, endTime } from "hono/timing";
+import type { TimingVariables } from "hono/timing";
 
-const app = new Hono();
+const app = new Hono<{ Variables: TimingVariables }>();
 
 app.use(
   cors({
@@ -48,8 +50,13 @@ app.all("/delay/:delay", async (c) => {
 app.get("/time", (c) => c.text(Date.now().toString()));
 
 app.use("/server-info", etag());
+app.use("/server-info", timing({ enabled: true }));
 app.get("/server-info", async (c) => {
-  return c.json(await getAllData());
+  startTime(c, "data");
+  const data = await getAllData();
+  endTime(c, "data");
+
+  return c.json(data);
 });
 
 export default app;
